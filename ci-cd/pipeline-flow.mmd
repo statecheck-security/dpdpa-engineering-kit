@@ -1,0 +1,45 @@
+sequenceDiagram
+    participant Dev as Developer
+    participant PR as Pull Request
+    participant G1 as Gate 1: SAST
+    participant G2 as Gate 2: IaC
+    participant G3 as Gate 3: Deploy
+    participant Prod as Production
+    participant Audit as Audit Trail
+
+    Dev->>PR: Push code changes
+    PR->>G1: Trigger SAST + secrets scan
+    G1->>G1: Semgrep custom rules (PII in logs)
+    G1->>G1: TruffleHog (secrets detection)
+    G1->>G1: PII pattern matching (Aadhaar, PAN)
+
+    alt Gate 1 fails
+        G1->>PR: Block merge + report violations
+        G1->>Audit: Log finding (S.8(5) non-compliance)
+    else Gate 1 passes
+        G1->>G2: Trigger IaC policy check
+    end
+
+    G2->>G2: OPA/Rego: encryption at rest check
+    G2->>G2: OPA/Rego: log retention >= 365 days
+    G2->>G2: OPA/Rego: IAM least-privilege check
+
+    alt Gate 2 fails
+        G2->>PR: Block merge + report violations
+        G2->>Audit: Log finding (Rule 6(1) non-compliance)
+    else Gate 2 passes
+        G2->>G3: Trigger deployment gate
+    end
+
+    G3->>G3: Erasure capability check (S.8(7))
+    G3->>G3: Purpose binding validation (S.6(1))
+    G3->>G3: Retention config check (Rule 8(1))
+
+    alt Gate 3 fails
+        G3->>PR: Block deploy + report violations
+    else Gate 3 passes
+        G3->>Prod: Deploy to production
+        G3->>Audit: Generate compliance report
+    end
+
+    Audit->>Audit: Retain reports with logs for >= 1 year (Rules 6(1)(e), 8(3))

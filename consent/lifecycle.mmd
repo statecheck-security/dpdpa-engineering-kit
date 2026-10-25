@@ -1,0 +1,30 @@
+sequenceDiagram
+    participant DP as Data Principal
+    participant API as Consent API
+    participant DB as PostgreSQL
+    participant KMS as Signing KMS
+    participant PR as Downstream Processor
+
+    DP->>API: GET /notices/{purpose_id}?lang=ta
+    API->>DB: SELECT notice_translation WHERE lang='ta'
+    DB-->>API: content, content_hash, translator_sig
+    API-->>DP: Notice bundle (Tamil) + content_hash
+    Note over API,DB: audit_event: NOTICE_SHOWN
+
+    DP->>API: POST /consents {purpose_id, notice_version_id, content_hash}
+    API->>API: Verify content_hash matches stored version
+    API->>KMS: Sign consent receipt (principal, purpose, notice, ts)
+    KMS-->>API: Ed25519 signature
+    API->>DB: INSERT consent_record, consent_audit_event (GRANT)
+    API-->>DP: 201 Created + signed receipt
+
+    Note over API: Purpose-bound processing proceeds
+    API->>DB: INSERT consent_audit_event (VIEW) on each data access
+
+    DP->>API: DELETE /consents/{consent_id}
+    API->>DB: UPDATE status='withdrawn', INSERT audit_event (WITHDRAW)
+    API->>PR: POST /erasure {principal_pseudonym, purpose_id}
+    PR-->>API: 202 Accepted
+    API->>DB: INSERT processor_fanout, audit_event (ERASURE_FANOUT)
+    PR->>API: POST /erasure/ack {fanout_id}
+    API->>DB: UPDATE erasure_confirmed_at, audit_event (ERASURE_CONFIRMED)

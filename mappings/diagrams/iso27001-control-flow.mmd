@@ -1,0 +1,20 @@
+flowchart TD
+    A[DPDPA Obligation Identified] --> B{Existing ISO 27001<br/>Annex A Control?}
+    B -->|Full Coverage| C[Map to Existing Control<br/>e.g., A.5.19, A.5.35]
+    B -->|Partial Coverage| D[Extend Existing Control<br/>e.g., A.8.10 + erasure triggers<br/>A.5.24/A.5.26 + regulatory notification]
+    B -->|No Coverage| E[Create DPDPA-Specific Control<br/>e.g., Consent Management<br/>DSAR Fulfilment<br/>Cross-Border Restrictions]
+
+    C --> F[Document in SoA<br/>Statement of Applicability]
+    D --> F
+    E --> F
+
+    F --> G[Implement Technical Controls]
+    G --> H[Evidence Collection<br/>for Audit]
+    H --> I{Audit Type}
+    I -->|ISO 27001 Surveillance| J[Demonstrate via<br/>existing audit cycle]
+    I -->|DPDPA Board Inquiry| K[Produce DPDPA-specific<br/>evidence package]
+    I -->|SDF Mandatory Audit| L[Independent data auditor<br/>assesses combined controls]
+
+    style E fill:#f9d6d6,stroke:#d44,stroke-width:2px
+    style D fill:#fef3cd,stroke:#d4a,stroke-width:2px
+    style C fill:#d4edda,stroke:#28a745,stroke-width:2px

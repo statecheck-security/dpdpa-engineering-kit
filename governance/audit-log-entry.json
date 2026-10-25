@@ -1,0 +1,11 @@
+{
+  "event_id": "uuid",
+  "timestamp": "2026-04-13T10:30:00.000Z",
+  "actor": { "service": "order-api", "user_id": "svc-account-007" },
+  "action": "READ",
+  "resource": "customers.email",
+  "principal_id_hash": "sha256:...",
+  "purpose": "order_fulfillment",
+  "outcome": "success",
+  "ip": "10.0.1.5"
+}

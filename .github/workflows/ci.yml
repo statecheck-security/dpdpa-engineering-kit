@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python (ruff, pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      # Includes the Docker (nginx TLS handshakes) and network (AWS condition keys) tests.
+      - run: pytest
+
+  sql:
+    name: SQL (PostgreSQL 16)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: bash scripts/sql-tests.sh
+
+  rego:
+    name: Rego (OPA)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: open-policy-agent/setup-opa@b2b258e089860efaadaaf71bf6e3aecb4a3eeff1 # v2.4.0
+        with:
+          version: 1.10.1
+      - name: Format, check and test every policy
+        run: |
+          dirs="encryption/policies ci-cd/policies threat-modeling/policies zero-trust/policies"
+          opa fmt --list --fail $dirs
+          opa check --strict $dirs
+          opa test -v $dirs
+
+  terraform:
+    name: Terraform (${{ matrix.module }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - encryption/terraform/aws
+          - encryption/terraform/azure
+          - encryption/terraform/gcp
+          - cross-border/terraform
+    defaults:
+      run:
+        working-directory: ${{ matrix.module }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.13.4
+          terraform_wrapper: false
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
+      # Plans against mocked providers; no cloud credentials involved.
+      - run: terraform test
+
+  semgrep:
+    name: Semgrep rules
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep:1.140.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: semgrep --validate --metrics=off --config ci-cd/semgrep/dpdpa-rules.yml
+      - run: semgrep --test --metrics=off ci-cd/semgrep
+
+  configs:
+    name: Workflow, Istio and diagram checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: actionlint
+        run: >-
+          docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.8 -no-color
+          .github/workflows/ci.yml ci-cd/github/dpdpa-privacy-checks.yml
+      - name: istioctl validate
+        run: docker run --rm -v "$PWD:/repo" istio/istioctl:1.27.3 validate -f /repo/encryption/istio/mtls.yaml
+      - name: Render every Mermaid diagram
+        run: |
+          find . -name '*.mmd' -not -path './.git/*' | while read -r f; do
+            docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/data" minlag/mermaid-cli:11.12.0 \
+              -q -i "/data/${f#./}" -o "/data/${f#./}.svg"
+            echo "ok  $f"
+          done

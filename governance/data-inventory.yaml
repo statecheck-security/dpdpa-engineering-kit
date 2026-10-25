@@ -1,0 +1,21 @@
+# Data processing inventory schema (implements ID.IM-P5 + Section 6(1))
+# Store as structured data in your CMDB or data catalogue
+data_processing_inventory:
+  - system_id: "crm-prod-01"
+    system_name: "Customer Relationship Management"
+    data_elements:
+      - field: "email_address"
+        classification: "personal_data_dpdpa"
+        purpose_keys: ["service_delivery", "support_communication"]
+      - field: "phone_number"
+        classification: "personal_data_dpdpa"
+        purpose_keys: ["two_factor_auth"]
+    data_processors:
+      - processor_name: "CloudCRM Inc."
+        contract_reference: "DPA-2025-047"
+        dpdpa_clauses_included: true
+        last_audit_date: "2025-11-15"
+    retention_policy:
+      default_days: 365
+      erasure_triggers: ["consent_withdrawal", "purpose_completion", "inactivity_threshold"]
+    geographic_scope: ["IN", "US"]

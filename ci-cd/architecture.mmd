@@ -1,0 +1,16 @@
+flowchart LR
+    A[Developer Push] --> B[Pre-Commit Hooks]
+    B --> C[CI Pipeline Triggered]
+    C --> D{Gate 1:<br/>SAST + Secrets}
+    D -->|Pass| E{Gate 2:<br/>IaC Policy Check}
+    D -->|Fail| F[Block Merge<br/>+ Report Finding]
+    E -->|Pass| G{Gate 3:<br/>Privacy Deployment Gate}
+    E -->|Fail| F
+    G -->|Pass| H[Deploy to Staging]
+    G -->|Fail| F
+    H --> I[Post-Deploy Validation]
+    I --> J[Production Deploy]
+
+    style D fill:#f9d6d6,stroke:#d44
+    style E fill:#fef3cd,stroke:#d4a
+    style G fill:#d4edda,stroke:#28a745

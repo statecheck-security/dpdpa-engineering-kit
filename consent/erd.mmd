@@ -1,0 +1,64 @@
+erDiagram
+    DATA_PRINCIPAL ||--o{ CONSENT_RECORD : "grants / withdraws"
+    PURPOSE ||--o{ NOTICE_VERSION : "has versions"
+    NOTICE_VERSION ||--o{ NOTICE_TRANSLATION : "has 23 translations"
+    NOTICE_VERSION ||--o{ CONSENT_RECORD : "bound to"
+    CONSENT_RECORD ||--o{ CONSENT_AUDIT_EVENT : "produces"
+    CONSENT_RECORD ||--o{ PROCESSOR_FANOUT : "fans out to"
+
+    DATA_PRINCIPAL {
+        uuid principal_id PK
+        string pseudonym_hash
+        timestamptz created_at
+    }
+    PURPOSE {
+        uuid purpose_id PK
+        string name
+        string legal_basis
+        string data_categories
+        timestamptz created_at
+    }
+    NOTICE_VERSION {
+        uuid notice_version_id PK
+        uuid purpose_id FK
+        int version_number
+        bytea canonical_hash
+        timestamptz effective_from
+        timestamptz superseded_at
+    }
+    NOTICE_TRANSLATION {
+        uuid translation_id PK
+        uuid notice_version_id FK
+        string language_code
+        text rendered_content
+        bytea content_hash
+        string translator_signature
+    }
+    CONSENT_RECORD {
+        uuid consent_id PK
+        uuid principal_id FK
+        uuid purpose_id FK
+        uuid notice_version_id FK
+        string language_shown
+        bytea receipt_hash
+        string status
+        timestamptz granted_at
+        timestamptz withdrawn_at
+        timestamptz erasure_confirmed_at
+    }
+    CONSENT_AUDIT_EVENT {
+        bigint event_id PK
+        uuid consent_id FK
+        string event_type
+        bytea prev_event_hash
+        bytea this_event_hash
+        jsonb event_payload
+        timestamptz occurred_at
+    }
+    PROCESSOR_FANOUT {
+        uuid fanout_id PK
+        uuid consent_id FK
+        string processor_id
+        string acknowledgement_status
+        timestamptz acknowledged_at
+    }

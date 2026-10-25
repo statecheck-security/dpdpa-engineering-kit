@@ -1,0 +1,32 @@
+# Istio service mesh mTLS configuration
+# Requires mTLS between all services in the production namespace.
+# Maps to: Rule 6(1)(a), Rule 6(1)(b) — access control + encryption
+#
+# These resources make mTLS mandatory; they do not set the TLS version.
+# Istio's mesh minimum is TLS 1.2. To refuse anything below TLS 1.3, set it
+# mesh-wide at install time:
+#
+#   meshConfig:
+#     meshMTLS:
+#       minProtocolVersion: TLSV1_3
+
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: dpdpa-strict-mtls
+  namespace: production
+spec:
+  mtls:
+    mode: STRICT  # All service-to-service traffic must use mTLS
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: dpdpa-tls-settings
+  namespace: production
+spec:
+  host: "*.production.svc.cluster.local"
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+      # Verify the negotiated version with: istioctl proxy-config secret <pod>

@@ -1,0 +1,16 @@
+sequenceDiagram
+    participant DP as Data Principal
+    participant CM as Consent Manager
+    participant DF as Data Fiduciary
+
+    DP->>CM: Grant consent for Purpose X
+    Note over CM: Records: principal_id, fiduciary_id,<br/>purpose_id, timestamp, action=GRANT
+    CM->>DF: Forward consent grant (metadata only)
+    DF->>DP: Request personal data (direct channel)
+    DP->>DF: Provide personal data (E2E encrypted)
+    Note over CM: CM never sees personal data payload
+
+    DP->>CM: Withdraw consent for Purpose X
+    Note over CM: Records: action=WITHDRAW, timestamp
+    CM->>DF: Forward withdrawal notification
+    DF->>DF: Cease processing, initiate erasure

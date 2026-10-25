@@ -1,0 +1,11 @@
+# Test and lint dependencies. Runtime code only needs the packages each folder's README lists.
+boto3==1.39.13
+cryptography==45.0.5
+email-validator==2.3.0
+fastapi==0.120.0
+httpx==0.28.1
+openpyxl==3.1.5
+pydantic==2.12.3
+pytest==8.3.4
+pyyaml==6.0.2
+ruff==0.14.2

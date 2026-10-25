@@ -1,0 +1,159 @@
+# .github/workflows/dpdpa-privacy-checks.yml
+#
+# The three privacy gates from "Privacy by Design in CI/CD", as one workflow.
+# Expected layout in the repo that adopts it:
+#   src/                         application code scanned by Gate 1
+#   .semgrep/dpdpa-rules.yml     ../semgrep/dpdpa-rules.yml
+#   infrastructure/              Terraform root module planned by Gate 2
+#   policies/dpdpa/*.rego        ../../encryption/policies/encryption.rego, ../policies/retention.rego
+#   scripts/check_erasure_support.py, config/pii-fields.yaml   (Gate 3)
+#
+# Third-party actions are pinned to a commit SHA; the comment gives the tag.
+name: DPDPA Privacy Compliance Checks
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  sast-privacy-scan:
+    name: "Gate 1: SAST + PII Detection"
+    runs-on: ubuntu-latest
+    container:
+      # semgrep/semgrep-action is archived; Semgrep's recommended setup runs its image directly.
+      image: semgrep/semgrep:1.140.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Run Semgrep with DPDPA custom rules
+        run: >-
+          semgrep scan --error
+          --config p/secrets
+          --config p/owasp-top-ten
+          --config .semgrep/dpdpa-rules.yml
+          src/
+
+      - name: Detect PII in log statements
+        shell: bash
+        run: |
+          # Custom grep-based check for common PII logging patterns
+          # Flags: aadhaar, PAN, email, phone in log/print statements
+          VIOLATIONS=$(grep -rn \
+            -e 'log.*\(.*aadhaar\|aadhar\|pan_number\|email.*@\)' \
+            -e 'print.*\(.*aadhaar\|aadhar\|pan_number\)' \
+            -e 'logger\.\(info\|debug\|warn\).*\(.*email\|phone\|mobile\)' \
+            --include="*.py" --include="*.js" --include="*.ts" \
+            --include="*.java" --include="*.go" \
+            src/ || true)
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::DPDPA Gate 1 FAILED: PII detected in log statements"
+            echo "$VIOLATIONS"
+            echo "Violation: Section 8(5) - reasonable security safeguards"
+            echo "Rule 6(1)(a): secure personal data by masking or obfuscation; keep it out of logs"
+            exit 1
+          fi
+
+      - name: Scan for hardcoded test data with real PII patterns
+        shell: bash
+        run: |
+          # Check for Aadhaar number patterns (XXXX XXXX XXXX or XXXX-XXXX-XXXX)
+          # Check for PAN patterns (AAAAA0000A)
+          # [[:space:]] is the POSIX class; "\s" inside [...] would only match a backslash or "s".
+          AADHAAR_HITS=$(grep -rnE \
+            '\b[0-9]{4}[[:space:]-][0-9]{4}[[:space:]-][0-9]{4}\b' \
+            --include="*.py" --include="*.js" --include="*.ts" \
+            --include="*.json" --include="*.yaml" --include="*.yml" \
+            src/ tests/ fixtures/ 2>/dev/null || true)
+          PAN_HITS=$(grep -rnE \
+            '\b[A-Z]{5}[0-9]{4}[A-Z]\b' \
+            --include="*.py" --include="*.js" --include="*.ts" \
+            --include="*.json" --include="*.yaml" --include="*.yml" \
+            src/ tests/ fixtures/ 2>/dev/null || true)
+          if [ -n "$AADHAAR_HITS" ] || [ -n "$PAN_HITS" ]; then
+            echo "::warning::Potential real PII in test fixtures."
+            echo "$AADHAAR_HITS"
+            echo "$PAN_HITS"
+            echo "DPDPA Section 6(1): data must be limited to what is necessary."
+            echo "Use synthetic/anonymised test data instead."
+          fi
+
+  secrets-scan:
+    name: "Gate 1: Verified secrets"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog for secrets
+        uses: trufflesecurity/trufflehog@31ce31ee1abbcc7dc8eee5764c17121c3044c8b2 # v3.99.7
+        with:
+          extra_args: --only-verified
+
+  iac-policy-check:
+    name: "Gate 2: IaC DPDPA Policy Validation"
+    runs-on: ubuntu-latest
+    needs: [sast-privacy-scan, secrets-scan]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_wrapper: false
+
+      - name: Install OPA
+        uses: open-policy-agent/setup-opa@b2b258e089860efaadaaf71bf6e3aecb4a3eeff1 # v2.4.0
+        with:
+          version: 1.10.1
+
+      - name: Plan Terraform
+        working-directory: infrastructure
+        run: |
+          # The plan needs read-only cloud credentials (e.g. OIDC) configured for this job.
+          terraform init -backend=false -input=false
+          terraform plan -input=false -out=tfplan.binary
+          terraform show -json tfplan.binary > ../tfplan.json
+
+      - name: Check encryption at rest and log retention (Rules 6(1)(a), 6(1)(e), 8(3))
+        run: |
+          # `opa eval --fail-defined` exits non-zero when the query returns any result,
+          # so each deny message becomes a failed gate.
+          opa eval --data policies/dpdpa/ --input tfplan.json --format pretty \
+            'msgs := [m | m := data.dpdpa[_].deny[_]]'
+          if ! opa eval --data policies/dpdpa/ --input tfplan.json --fail-defined \
+               'data.dpdpa[_].deny[_]' > /dev/null; then
+            echo "::error::DPDPA Gate 2 FAILED: see the deny messages above"
+            exit 1
+          fi
+
+  privacy-deployment-gate:
+    name: "Gate 3: Privacy Deployment Validation"
+    runs-on: ubuntu-latest
+    needs: iac-policy-check
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Verify erasure capability exists (Section 8(7))
+        run: |
+          pip install pyyaml==6.0.2
+          # Check that all models storing personal data have
+          # a corresponding erasure/anonymisation method
+          python scripts/check_erasure_support.py \
+            --models-dir src/models/ \
+            --pii-fields-config config/pii-fields.yaml
+          # Exit code 1 if any PII model lacks erasure support
+
+      # The article's Gate 3 also runs check_purpose_bindings.py,
+      # validate_retention.py and generate_compliance_report.py. Those scripts
+      # are specific to each codebase and are not part of this kit; add them
+      # here once you have written them.

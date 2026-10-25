@@ -1,0 +1,36 @@
+{
+  "mode": "Indexed",
+  "policyRule": {
+    "if": {
+      "allOf": [
+        {
+          "field": "type",
+          "in": [
+            "Microsoft.Storage/storageAccounts",
+            "Microsoft.Sql/servers",
+            "Microsoft.DocumentDB/databaseAccounts",
+            "Microsoft.KeyVault/vaults"
+          ]
+        },
+        {
+          "field": "tags['data-residency']",
+          "equals": "india"
+        },
+        {
+          "not": {
+            "field": "location",
+            "in": [
+              "centralindia",
+              "southindia",
+              "westindia"
+            ]
+          }
+        }
+      ]
+    },
+    "then": {
+      "effect": "deny"
+    }
+  },
+  "parameters": {}
+}

@@ -1,0 +1,34 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyRegionalActionsOutsideIndia",
+      "Effect": "Deny",
+      "NotAction": [
+        "cloudfront:*",
+        "iam:*",
+        "organizations:*",
+        "route53:*",
+        "support:*",
+        "sts:*"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:RequestedRegion": ["ap-south-1", "ap-south-2"]
+        }
+      }
+    },
+    {
+      "Sid": "OnlyResidencyAdminSetsS3Replication",
+      "Effect": "Deny",
+      "Action": "s3:PutReplicationConfiguration",
+      "Resource": "arn:aws:s3:::myorg-india-*",
+      "Condition": {
+        "ArnNotLike": {
+          "aws:PrincipalArn": "arn:aws:iam::*:role/data-residency-admin"
+        }
+      }
+    }
+  ]
+}

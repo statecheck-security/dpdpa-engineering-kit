@@ -1,0 +1,17 @@
+# Example: Extended data classification policy (policy-as-code)
+data_classification:
+  tiers:
+    - level: public
+      controls: [integrity_check]
+    - level: internal
+      controls: [access_control, integrity_check]
+    - level: confidential
+      controls: [access_control, encryption_at_rest, integrity_check]
+    - level: personal_data_dpdpa
+      # integrity_check carries over from the lower tiers: alteration of
+      # personal data is a breach under Section 2(u)
+      controls: [access_control, encryption_at_rest, encryption_in_transit,
+                 integrity_check, purpose_binding, retention_enforcement,
+                 erasure_capability, consent_verification, audit_logging]
+      retention_policy: purpose_bound
+      erasure_trigger: [consent_withdrawal, purpose_completion]

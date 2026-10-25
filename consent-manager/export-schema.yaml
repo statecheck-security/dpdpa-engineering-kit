@@ -1,0 +1,24 @@
+# Consent record export schema (machine-readable, per Part B Item 4b)
+consent_export:
+  format: "application/json"
+  schema_version: "1.0"
+  data_principal:
+    identifier: "pseudonymised_id"  # Not PII in the export metadata
+  records:
+    - type: "CONSENT_GRANT"
+      fiduciary_id: "fiduciary_abc"
+      purpose: "Marketing communications"
+      timestamp: "2026-01-15T10:30:00Z"
+      notice_reference: "notice_hash_xyz"
+    - type: "CONSENT_WITHDRAWAL"
+      fiduciary_id: "fiduciary_abc"
+      purpose: "Marketing communications"
+      timestamp: "2026-06-20T14:15:00Z"
+    - type: "DATA_SHARE"
+      source_fiduciary: "fiduciary_abc"
+      target_fiduciary: "fiduciary_def"
+      timestamp: "2026-03-10T09:00:00Z"
+      payload_hash: "sha256:a1b2c3..."
+  retention:
+    minimum_years: 7
+    policy: "immutable_append_only"

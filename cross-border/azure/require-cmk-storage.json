@@ -1,0 +1,24 @@
+{
+  "mode": "Indexed",
+  "policyRule": {
+    "if": {
+      "allOf": [
+        {
+          "field": "type",
+          "equals": "Microsoft.Storage/storageAccounts"
+        },
+        {
+          "field": "tags['data-residency']",
+          "equals": "india"
+        },
+        {
+          "field": "Microsoft.Storage/storageAccounts/encryption.keySource",
+          "notEquals": "Microsoft.Keyvault"
+        }
+      ]
+    },
+    "then": {
+      "effect": "deny"
+    }
+  }
+}

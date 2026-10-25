@@ -1,0 +1,20 @@
+sequenceDiagram
+    participant DP as Data Principal<br/>(S.2(j))
+    participant W as Web App<br/>[Purpose: loan_origination]
+    participant CM as Consent Service<br/>(S.6(10) ledger)
+    participant KYC as KYC Processor<br/>(S.8(1) DPA-bound)
+    participant DB as Customer DB<br/>[Rule 6(1)(a) encrypted]
+    participant DPB as Data Protection Board
+
+    DP->>W: Submit loan application (PII)
+    W->>CM: Record consent [purpose=loan_origination, lang=ta]
+    CM-->>W: consent_id (signed, timestamped)
+    W->>KYC: Forward KYC docs (TLS 1.3, mTLS)
+    KYC-->>W: KYC verdict
+    W->>DB: Store application (field-level encrypted)
+    Note over DB: Retention clock: erase when purpose served (S.8(7)), logs kept min 1y (Rule 8(3))
+    DP->>W: Section 12 erasure request
+    W->>CM: Revoke consent + cascade delete
+    CM->>DB: Cryptographic erasure (key destruction)
+    W-->>DP: Confirmation (Rule 6(1)(c) logged)
+    Note over W,DPB: On breach: Rule 7 — DPs and Board without delay<br/>detailed Board report within 72h (Rule 7(2)(b))

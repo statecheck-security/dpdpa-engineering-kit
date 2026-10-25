@@ -1,0 +1,39 @@
+# .gitlab-ci.yml (privacy gates section)
+stages:
+  - privacy-scan
+  - iac-validate
+  - deploy-gate
+  - deploy
+
+dpdpa-sast-scan:
+  stage: privacy-scan
+  image: semgrep/semgrep:1.140.0
+  script:
+    # --gitlab-sast writes GitLab's SAST report schema; plain --json output is
+    # not accepted by artifacts:reports:sast.
+    - semgrep scan --config p/secrets --config p/owasp-top-ten
+      --config .semgrep/dpdpa-rules.yml
+      --error --gitlab-sast --output gl-sast-report.json src/
+    - |
+      # PII in log statements check (same patterns as the GitHub workflow;
+      # the \( ... \) groups keep each alternation inside its log call)
+      VIOLATIONS=$(grep -rn \
+        -e 'log.*\(.*aadhaar\|aadhar\|pan_number\|email.*@\)' \
+        -e 'print.*\(.*aadhaar\|aadhar\|pan_number\)' \
+        -e 'logger\.\(info\|debug\|warn\).*\(.*email\|phone\|mobile\)' \
+        --include="*.py" --include="*.js" --include="*.ts" \
+        --include="*.java" --include="*.go" \
+        src/ || true)
+      if [ -n "$VIOLATIONS" ]; then
+        echo "DPDPA Gate 1 FAILED: PII in log statements"
+        echo "$VIOLATIONS"
+        echo "Ref: Section 8(5), Rule 6(1)(a)"
+        exit 1
+      fi
+  artifacts:
+    when: always
+    reports:
+      sast: gl-sast-report.json
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'

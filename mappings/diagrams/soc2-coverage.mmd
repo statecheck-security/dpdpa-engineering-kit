@@ -1,0 +1,17 @@
+flowchart LR
+    A[DPDPA Obligation] --> B{SOC 2 TSC<br/>Mapping Exists?}
+    B -->|Full Coverage| C[CC6.x Security<br/>CC9.2 Vendor Mgmt]
+    B -->|Partial Coverage| D[P1-P5 Privacy TSC<br/>CC7.x Incident Mgmt]
+    B -->|No Coverage| E[Net-New Controls<br/>Required]
+
+    C --> F[Document mapping<br/>for Board evidence]
+    D --> G[Extend existing<br/>SOC 2 controls]
+    E --> H[Build DPDPA-specific<br/>control layer]
+
+    G --> I[Unified Compliance<br/>Framework]
+    F --> I
+    H --> I
+
+    style C fill:#d4edda,stroke:#28a745
+    style D fill:#fef3cd,stroke:#d4a
+    style E fill:#f9d6d6,stroke:#d44

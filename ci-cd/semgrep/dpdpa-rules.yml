@@ -1,0 +1,49 @@
+# .semgrep/dpdpa-rules.yml
+rules:
+  - id: dpdpa-pii-in-logs
+    message: >
+      Logging personal data undermines the DPDPA Section 8(5) safeguards
+      duty; Rule 6(1)(a) lists masking and obfuscation. PII must not appear in application logs.
+      Use a structured logger with PII field redaction.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: logging.$LEVEL(..., $EXPR, ...)
+          - pattern: logger.$LEVEL(..., $EXPR, ...)
+      - metavariable-regex:
+          metavariable: $EXPR
+          regex: .*(email|phone|aadhaar|pan_number|mobile|address).*
+
+  - id: dpdpa-unencrypted-pii-storage
+    message: >
+      Storing personal data without encryption, masking or
+      tokenisation falls short of Rule 6(1)(a). Use field-level encryption or ensure
+      the storage backend has encryption at rest enabled.
+    severity: WARNING
+    languages: [python]
+    # Django declares fields in the class body (`email = models.CharField(...)`),
+    # and metavariable-regex has to sit under `patterns`.
+    patterns:
+      - pattern-inside: |
+          class $MODEL(...):
+              ...
+      - pattern: $FIELD = models.CharField(...)
+      - metavariable-regex:
+          metavariable: $FIELD
+          regex: ^(aadhaar|aadhaar_number|pan|pan_number|email|phone|mobile|address|dob|date_of_birth)$
+
+  - id: dpdpa-excessive-data-collection
+    message: >
+      API endpoint collects more fields than may be necessary
+      for the stated purpose. Review against DPDPA Section 6(1)
+      data minimisation requirement.
+    severity: WARNING
+    languages: [python]
+    # Meta.fields belongs to ModelSerializer; a plain Serializer has no Meta.
+    pattern: |
+      class $SERIALIZER(serializers.ModelSerializer):
+          ...
+          class Meta:
+              ...
+              fields = '__all__'

@@ -1,0 +1,2 @@
+POST /v1/consent          { principal_id, purpose_id, granted: true }   ← grant
+POST /v1/consent/withdraw { principal_id, purpose_id }                   ← withdraw (same auth, same steps)

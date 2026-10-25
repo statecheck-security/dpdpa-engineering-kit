@@ -1,0 +1,38 @@
+flowchart TD
+    subgraph NIST["NIST Privacy Framework"]
+        IDP["ID-P: Identify"]
+        GVP["GV-P: Govern"]
+        CTP["CT-P: Control"]
+        CMP["CM-P: Communicate"]
+        PRP["PR-P: Protect"]
+    end
+
+    subgraph DPDPA["DPDPA Obligations"]
+        S56["S.5-6: Consent & Notice"]
+        S84["S.8(4): Technical Measures"]
+        S85["S.8(5): Security Safeguards"]
+        S86["S.8(6): Breach Notification"]
+        S87["S.8(7): Data Erasure"]
+        S1112["S.11-12: Data Principal Rights"]
+        S13["S.13: Grievance Redressal"]
+        S10["S.10: SDF Obligations"]
+    end
+
+    IDP --> S56
+    IDP --> S1112
+    GVP --> S84
+    GVP --> S85
+    GVP --> S10
+    CTP --> S56
+    CTP --> S87
+    CTP --> S1112
+    CMP --> S56
+    CMP --> S86
+    CMP --> S13
+    PRP --> S85
+
+    style IDP fill:#e8f4fd,stroke:#1976d2
+    style GVP fill:#e8f4fd,stroke:#1976d2
+    style CTP fill:#e8f4fd,stroke:#1976d2
+    style CMP fill:#e8f4fd,stroke:#1976d2
+    style PRP fill:#e8f4fd,stroke:#1976d2

@@ -1,0 +1,38 @@
+# config/pii-fields.yaml
+# Fields classified as personal data under DPDPA Section 2(t)
+# "personal data means any data about an individual who is
+#  identifiable by or in relation to such data"
+
+pii_field_names:
+  # Direct identifiers
+  - aadhaar
+  - aadhaar_number
+  - pan
+  - pan_number
+  - passport_number
+  - voter_id
+
+  # Contact information
+  - email
+  - email_address
+  - phone
+  - phone_number
+  - mobile
+  - mobile_number
+  - address
+  - postal_code
+  - pincode
+
+  # Biometric, health and financial (DPDPA has no separate 'sensitive' category)
+  - date_of_birth
+  - dob
+  - gender
+  - biometric_data
+  - health_data
+  - financial_data
+
+  # Behavioural (relevant for Section 9 -- children)
+  - location_data
+  - browsing_history
+  - device_fingerprint
+  - ip_address

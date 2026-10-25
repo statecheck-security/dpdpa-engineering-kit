@@ -1,0 +1,8 @@
+Incident detected in SIEM
+  → Correlation rule classifies event as Section 2(u) breach candidate
+  → Incident ticket auto-created with Rule 7(2)(a) fields pre-populated (nature, extent, timing, location, likely impact)
+  → Legal/DPO review gate (hard 4-hour internal SLA)
+  → Initial Board intimation submitted (Rule 7(2)(a), without delay)
+  → Data Principal intimations queued per Rule 7(1) template (via user account / registered channel)
+  → Detailed Board report filed within 72 hours (Rule 7(2)(b)), or written extension request
+  → Breach records kept with the security logs retained for one year (Rule 6(1)(e))

@@ -1,0 +1,24 @@
+# Cloud infrastructure policy for DPDPA cross-border restrictions (Section 16)
+# Merges the versions in the ISO 27001 and SOC 2 mapping articles.
+# No SOC 2 or ISO 27001 control covers this; it is a net-new control.
+data_residency_policy:
+  default_region: ap-south-1  # AWS Mumbai
+  restricted_destinations: []  # Updated per MeitY gazette notifications
+  enforcement_layers:
+    - type: cloud_provider_policy
+      mechanism: AWS Service Control Policies / Azure Policy / GCP Org Policies
+      action: deny_resource_creation_outside_allowed_regions
+      implementation:
+        - cross-border/aws/scp-india-residency.json
+        - cross-border/azure/deny-non-india-locations.json
+    - type: network_egress
+      mechanism: VPC endpoint policies, PrivateLink
+      action: block_data_egress_to_restricted_jurisdictions
+    - type: application_middleware
+      mechanism: Transfer validation interceptor
+      action: check_destination_country_before_transfer
+      implementation:
+        - cross-border/transfer_governance.py
+  monitoring:
+    alert_on: attempted_transfer_to_restricted_destination
+    log_to: compliance_audit_trail

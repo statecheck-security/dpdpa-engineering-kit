@@ -1,0 +1,19 @@
+{
+  "dpdpa_restricted_destinations": [],
+  "gdpr_adequate_countries": [
+    "EU", "GB", "CH", "JP", "KR", "NZ", "AR", "CA", "IL", "UY", "AD",
+    "FO", "GG", "IM", "JE"
+  ],
+  "sectoral_rules": {
+    "RBI": {
+      "localisation_required": true,
+      "description": "RBI mandates that payment system data must be stored only in India"
+    },
+    "SEBI": {
+      "localisation_required": false,
+      "requires_board_approval": true
+    }
+  },
+  "last_updated": "2026-04-02",
+  "meity_notification_reference": "None as of 2026-10-17"
+}

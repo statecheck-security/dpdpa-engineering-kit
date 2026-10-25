@@ -1,0 +1,12 @@
+{
+  "data_category": "delivery_address",
+  "collection_point": "checkout_api_v2",
+  "purpose": "order_fulfillment",
+  "lawful_ground": "consent_s6",
+  "storage_system": "postgres://customer-db/orders",
+  "processors": ["ShipRocket", "AWS_RDS"],
+  "cross_border": false,
+  "retention_days": 730,
+  "retention_basis": "DPDPA_S8_7_purpose_limitation",
+  "last_audited": "2026-04-01"
+}

@@ -1,0 +1,15 @@
+sequenceDiagram
+    participant SIEM
+    participant Triage as Triage Engine
+    participant DP as Data Principal<br/>Notification (CM.AW-P7)
+    participant Board as Board Notification<br/>(DPDPA-specific)
+    participant Audit as Audit Log<br/>(CT.DM-P8)
+
+    SIEM->>Triage: Security event detected
+    Triage->>Triage: Classify as personal data breach<br/>(Section 2(u) criteria)
+    Triage->>DP: Tier 1: Notify affected Data Principals<br/>"without delay" (Rule 7(1))
+    Triage->>Board: Tier 2a: Initial intimation to Board<br/>"without delay" (Rule 7(2)(a))
+    Triage->>Audit: Log breach event + all actions
+    Note over Board: Clock: 72 h from awareness<br/>(extendable on written request)
+    Triage->>Board: Tier 2b: Detailed report within 72 h<br/>(Rule 7(2)(b)(i)-(vi))
+    Audit->>Audit: Retain all records >= 1 year<br/>(Rule 6(1)(e))

@@ -1,0 +1,49 @@
+[project]
+name = "dpdpa-engineering-kit"
+version = "0.1.0"
+description = "Code patterns for India's DPDP Act 2023 and DPDP Rules 2025, from StateCheck Security's articles."
+requires-python = ">=3.12"
+license = "Apache-2.0"
+
+[tool.pytest.ini_options]
+# Each topic folder is importable on its own; tests live next to the code they test.
+pythonpath = [
+  "consent",
+  "consent-manager",
+  "breach-notification",
+  "encryption",
+  "cross-border",
+  "ci-cd/scripts",
+  "threat-modeling",
+  "zero-trust",
+  "rights-and-erasure",
+  "governance",
+]
+testpaths = ["."]
+addopts = "--import-mode=importlib"
+markers = [
+  "docker: needs a running Docker engine",
+  "network: needs internet access (AWS Service Reference)",
+]
+filterwarnings = [
+  # Raised inside Starlette's TestClient, not by kit code
+  "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
+]
+norecursedirs = [".venv", ".git", "node_modules"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+# Bugs, unused code and security checks. No pure-style rules, so the code stays
+# recognisably the same as in the articles it comes from.
+select = ["E", "F", "W", "I", "B", "S"]
+ignore = ["S101"]  # assert is how pytest tests are written
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends"]  # FastAPI's dependency-injection idiom
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S105", "S106"]  # test keys and passwords are fixtures, not secrets

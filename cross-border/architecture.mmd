@@ -1,0 +1,27 @@
+flowchart LR
+    subgraph EU["EU Region (eu-west-1 / West Europe)"]
+        EU_DB[(EU Personal Data)]
+        EU_APP[Application Tier]
+        EU_KMS[EU KMS Keys]
+    end
+
+    subgraph IN["India Region (ap-south-1 / Central India)"]
+        IN_DB[(India Personal Data)]
+        IN_APP[Application Tier]
+        IN_KMS[India KMS Keys]
+    end
+
+    subgraph GOV["Transfer Governance Layer"]
+        POLICY[Policy Engine]
+        AUDIT[Audit Logger]
+        RESTRICT[Restriction Config]
+    end
+
+    EU_APP -->|Governed Transfer| GOV
+    IN_APP -->|Governed Transfer| GOV
+    GOV -->|If Permitted| EU_APP
+    GOV -->|If Permitted| IN_APP
+
+    style EU fill:#e6f3ff,stroke:#0066cc
+    style IN fill:#fff3e6,stroke:#cc6600
+    style GOV fill:#f0f0f0,stroke:#666
