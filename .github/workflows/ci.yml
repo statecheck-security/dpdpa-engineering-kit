@@ -51,10 +51,10 @@ jobs:
           version: 1.10.1
       - name: Format, check and test every policy
         run: |
-          dirs="encryption/policies ci-cd/policies threat-modeling/policies zero-trust/policies"
-          opa fmt --list --fail $dirs
-          opa check --strict $dirs
-          opa test -v $dirs
+          dirs=(encryption/policies ci-cd/policies threat-modeling/policies zero-trust/policies)
+          opa fmt --list --fail "${dirs[@]}"
+          opa check --strict "${dirs[@]}"
+          opa test -v "${dirs[@]}"
 
   terraform:
     name: Terraform (${{ matrix.module }})

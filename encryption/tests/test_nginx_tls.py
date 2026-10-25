@@ -74,12 +74,16 @@ def nginx(tmp_path_factory):
     started = _docker_run("run", "-d", "--rm", "--name", name, "-p", f"127.0.0.1:{port}:8443", *mounts, NGINX_IMAGE)
     assert started.returncode == 0, started.stderr
     try:
-        deadline = time.monotonic() + 20
-        while time.monotonic() < deadline:
+        # Docker's port proxy accepts TCP before nginx is listening inside the
+        # container, so wait for a completed TLS handshake, not just a connect.
+        deadline = time.monotonic() + 30
+        while True:
             try:
-                socket.create_connection(("127.0.0.1", port), timeout=1).close()
+                _handshake(port)
                 break
-            except OSError:
+            except (OSError, ssl.SSLError):
+                if time.monotonic() > deadline:
+                    raise
                 time.sleep(0.3)
         yield port, check.stderr
     finally:
