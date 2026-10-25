@@ -1,7 +1,7 @@
 {
   "dpdpa_restricted_destinations": [],
   "gdpr_adequate_countries": [
-    "EU", "GB", "CH", "JP", "KR", "NZ", "AR", "CA", "IL", "UY", "AD",
+    "EU", "GB", "CH", "JP", "KR", "NZ", "AR", "CA", "IL", "UY", "BR", "AD",
     "FO", "GG", "IM", "JE"
   ],
   "sectoral_rules": {

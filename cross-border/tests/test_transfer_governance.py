@@ -78,3 +78,11 @@ def test_unknown_region_is_not_treated_as_india(engine):
     # An unmapped destination must not slip past RBI localisation.
     blocked = engine.evaluate(req(sectoral_regulator="RBI", destination_region="ap-southeast-1"))
     assert blocked is TransferDecision.BLOCKED
+
+
+def test_adequacy_list_matches_the_commission():
+    """European Commission adequacy decisions, checked 25 Oct 2026. The US is left out on purpose:
+    its adequacy covers only organisations certified under the EU-US Data Privacy Framework."""
+    listed = set(json.loads(CONFIG.read_text(encoding="utf-8"))["gdpr_adequate_countries"])
+    assert listed == {"EU", "AD", "AR", "BR", "CA", "FO", "GG", "IL", "IM", "JP", "JE", "NZ", "KR", "CH", "GB", "UY"}
+    assert "IN" not in listed
