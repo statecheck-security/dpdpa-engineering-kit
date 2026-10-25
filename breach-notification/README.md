@@ -9,7 +9,7 @@ and [DPDP Act 2023: data breach duties](https://statechecksecurity.com/blog/dpdp
 | File | What it is |
 |---|---|
 | `savedsearches.conf` | Splunk correlation search that tags security events on assets holding personal data and sends them to a SOAR webhook |
-| `breach_classifier.py` | Applies the Section 2(u) test: personal data involved, not authorised, and a recognised breach type, or escalate to the DPO |
+| `breach_classifier.py` | Applies the Section 2(u) test: personal data involved, not authorised, and a recognised breach type, or escalate for human review. (`ESCALATE_TO_DPO` means whoever owns privacy decisions; only a Significant Data Fiduciary must appoint a DPO, under Section 10(2)(a).) |
 | `pipeline.txt` | The notification pipeline, from SIEM to the detailed Board report within 72 hours |
 | `nist-breach-workflow.mmd` | The same workflow, mapped to the NIST Privacy Framework |
 
