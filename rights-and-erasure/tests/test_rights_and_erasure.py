@@ -107,3 +107,57 @@ def test_erasure_without_holds_is_completed(rights):
     service, inventory, _ = rights
     inventory.holds.clear()
     assert service.handle_erasure_request("dp-1", "consent_withdrawal")["status"] == "completed"
+
+
+def test_correction_updates_fields_and_notifies_downstream(rights):
+    service, inventory, audit = rights
+    corrections = {
+        "crm": {"email": "asha.new@example.in"},
+    }
+    resp = service.handle_correction_request("dp-1", corrections, reason="email_update")
+    assert resp["status"] == "completed"
+    assert resp["systems_updated"] == 1
+    assert resp["downstream_notified"] == 1
+    crm_elements = inventory.data_elements("crm", "dp-1")
+    assert any(el.get("value") == "asha.new@example.in" for el in crm_elements)
+    # Check audit log
+    event = audit.events[-1]
+    assert event["event"] == "correction_executed"
+    assert event["systems"] == ["crm"]
+    assert "asha.new@example.in" not in str(event)
+
+
+def test_correction_respects_legal_holds(rights):
+    service, inventory, _ = rights
+    corrections = {
+        "billing": {"gstin": "29XYZ9999F1Z9"},
+    }
+    resp = service.handle_correction_request("dp-1", corrections)
+    assert resp["status"] == "partially_completed"
+    assert resp["retention_holds"] == 1
+    assert resp["systems_updated"] == 0
+
+
+def test_nomination_registration_and_retrieval(rights):
+    service, _, audit = rights
+    nominee_data = {
+        "name": "Rohan Sharma",
+        "relationship": "son",
+        "contact": "+919876543210",
+    }
+    resp = service.handle_nomination_request("dp-1", nominee_data)
+    assert resp["status"] == "completed"
+    assert resp["nominee"]["name"] == "Rohan Sharma"
+
+    retrieved = service.get_nomination("dp-1")
+    assert retrieved == nominee_data
+    event = audit.events[-1]
+    assert event["event"] == "nomination_registered"
+    assert event["nominee_name"] == "Rohan Sharma"
+
+
+def test_nomination_invalid_details_rejected(rights):
+    service, _, _ = rights
+    resp = service.handle_nomination_request("dp-1", {})
+    assert resp["status"] == "rejected"
+    assert resp["reason"] == "invalid_nominee_details"

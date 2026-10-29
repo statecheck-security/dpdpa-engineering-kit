@@ -89,3 +89,27 @@ def test_both_operations_are_audited_without_the_plaintext(enc):
     assert audit.events[1]["requester"] == "support-agent-7"
     assert "asha@example.in" not in repr(audit.events)
     assert all(call[2]["purpose"] == "dpdpa_field_encryption" for call in kms.calls)
+
+
+def test_pseudonymized_kms_context_prevents_cleartext_pii_in_cloudtrail():
+    kms, audit = FakeKMS(), RecordingAudit()
+    secret_key = b"super-secret-pseudonym-key-32b!"
+    encryptor = DPDPAFieldEncryptor(
+        kms, audit, kek_id="alias/dpdpa-personal-data-test", pseudonym_key=secret_key
+    )
+    raw_pid = "asha@example.in"  # Often used as principal ID in legacy apps
+    field = encryptor.encrypt_field("+919876543210", "phone", raw_pid)
+
+    # CloudTrail / KMS context must NOT contain the raw identifier
+    kms_context = kms.calls[0][2]
+    assert kms_context["principal"] != raw_pid
+    assert len(kms_context["principal"]) == 64  # SHA-256 hex
+    assert "asha@example.in" not in repr(kms.calls)
+
+    # Decryption works with the same principal
+    decrypted = encryptor.decrypt_field(field, "phone", raw_pid, requester="support-agent-7")
+    assert decrypted == "+919876543210"
+
+    # Decryption with another principal fails
+    with pytest.raises(InvalidTag):
+        encryptor.decrypt_field(field, "phone", "someone-else@example.in", requester="attacker")

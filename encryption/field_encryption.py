@@ -8,6 +8,8 @@ Key Encryption Key (KEK).
 
 Maps to: Rule 6(1)(a) — encryption of personal data
 """
+import hashlib
+import hmac
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -37,10 +39,18 @@ class DPDPAFieldEncryptor:
     5. Log the encryption event for Rule 6(1)(c) audit
     """
 
-    def __init__(self, kms_client, audit_logger, kek_id: str):
+    def __init__(self, kms_client, audit_logger, kek_id: str, pseudonym_key: bytes | None = None):
         self.kms = kms_client
         self.audit = audit_logger
         self.kek_id = kek_id
+        self.pseudonym_key = pseudonym_key
+
+    def _context_principal(self, data_principal_id: str) -> str:
+        """Pseudonymise the Data Principal ID for KMS encryption context to prevent
+        plaintext PII from being logged in CloudTrail / cloud audit trails."""
+        if self.pseudonym_key:
+            return hmac.new(self.pseudonym_key, data_principal_id.encode("utf-8"), hashlib.sha256).hexdigest()
+        return data_principal_id
 
     def encrypt_field(
         self,
@@ -73,12 +83,13 @@ class DPDPAFieldEncryptor:
         )
 
         # Step 3: Wrap the DEK with KMS KEK
+        context_principal = self._context_principal(data_principal_id)
         wrapped_dek = self.kms.encrypt(
             key_id=self.kek_id,
             plaintext=dek,
             encryption_context={
                 "field": field_name,
-                "principal": data_principal_id,
+                "principal": context_principal,
                 "purpose": "dpdpa_field_encryption",
             },
         )
@@ -118,12 +129,13 @@ class DPDPAFieldEncryptor:
         Every decryption event is logged per Rule 6(1)(c).
         """
         # Step 1: Unwrap DEK via KMS
+        context_principal = self._context_principal(data_principal_id)
         dek = self.kms.decrypt(
             key_id=encrypted.kek_id,
             ciphertext=encrypted.wrapped_dek,
             encryption_context={
                 "field": field_name,
-                "principal": data_principal_id,
+                "principal": context_principal,
                 "purpose": "dpdpa_field_encryption",
             },
         )

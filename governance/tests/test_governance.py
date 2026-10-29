@@ -1,8 +1,11 @@
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
 import yaml
 from governance_config import DPDPA_GOVERNANCE_CONFIG
+from grievance_service import DPDPAGrievanceService, GrievanceCategory, GrievanceStatus
 
 HERE = Path(__file__).resolve().parent.parent
 KIT = HERE.parent
@@ -63,3 +66,78 @@ def test_data_audit_item_has_lawful_ground_and_retention_basis():
     item = load_json("data-audit-item.json")
     assert item["lawful_ground"] and item["retention_basis"]
     assert isinstance(item["cross_border"], bool)
+
+
+class RecordingAudit:
+    def __init__(self):
+        self.events = []
+
+    def write(self, event):
+        self.events.append(event)
+
+
+def test_grievance_registration_assigns_sla_and_acknowledgement():
+    audit = RecordingAudit()
+    service = DPDPAGrievanceService(audit=audit, sla_days=30)
+    now = datetime(2026, 10, 29, 10, 0, tzinfo=timezone.utc)
+
+    ticket = service.register_grievance(
+        principal_id="dp-777",
+        category=GrievanceCategory.RIGHTS_UNFULFILLED,
+        description="Erasure request not fulfilled after 30 days.",
+        created_at=now,
+    )
+
+    assert ticket.ticket_id.startswith("GRV-2026-")
+    assert ticket.status == GrievanceStatus.ACKNOWLEDGED
+    assert ticket.sla_due_at == now + timedelta(days=30)
+    assert len(audit.events) == 1
+    assert audit.events[0]["event"] == "grievance_registered"
+
+
+def test_grievance_escalation_and_resolution_flow():
+    audit = RecordingAudit()
+    service = DPDPAGrievanceService(audit=audit)
+
+    ticket = service.register_grievance(
+        principal_id="dp-888",
+        category="security_breach",
+        description="Unrecognized login activity on account.",
+    )
+
+    # Escalate to DPO
+    escalated = service.escalate_to_dpo(ticket.ticket_id, reason="Potential credential compromise")
+    assert escalated.status == GrievanceStatus.ESCALATED_TO_DPO
+    assert escalated.escalated_to_dpo_at is not None
+
+    # Resolve grievance
+    resolved = service.resolve_grievance(
+        ticket.ticket_id,
+        resolution_summary="Sessions invalidated, credentials reset, no unauthorized data access occurred.",
+    )
+    assert resolved.status == GrievanceStatus.RESOLVED
+    assert resolved.resolution_summary is not None
+    # Section 13(3) advisory must be present
+    assert "Data Protection Board of India" in resolved.dpbi_appeal_notice
+
+
+def test_grievance_sla_breach_detection():
+    audit = RecordingAudit()
+    service = DPDPAGrievanceService(audit=audit, sla_days=30)
+    created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    ticket = service.register_grievance(
+        principal_id="dp-999",
+        category=GrievanceCategory.CONSENT_VIOLATION,
+        description="Marketing emails received after consent withdrawal.",
+        created_at=created_at,
+    )
+
+    # Check status after 45 days (past 30-day SLA)
+    status_check = service.check_sla_status(
+        ticket.ticket_id, now=created_at + timedelta(days=45)
+    )
+    assert status_check["sla_breached"] is True
+    assert status_check["remaining_days"] == 0
+
+    with pytest.raises(ValueError, match="description cannot be empty"):
+        service.register_grievance("dp-1", GrievanceCategory.GENERAL_PROCESSING, "   ")

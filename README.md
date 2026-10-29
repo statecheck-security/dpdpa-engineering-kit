@@ -1,5 +1,11 @@
 # DPDPA Engineering Kit
 
+[![CI Status](https://github.com/ithis0623-png/dpdpa-engineering-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/ithis0623-png/dpdpa-engineering-kit/actions)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Python Version](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
+[![Compliance](https://img.shields.io/badge/DPDPA-2023%20%7C%20DPDP%20Rules%202025-emerald.svg)](https://www.meity.gov.in/)
+[![Tests](https://img.shields.io/badge/tests-140%20passed-success.svg)](ci-cd/)
+
 Tested code for India's Digital Personal Data Protection Act, 2023 and the DPDP Rules, 2025:
 consent records, breach detection, encryption, data residency, CI/CD privacy gates and
 control mappings. Each folder comes from one of
@@ -14,16 +20,16 @@ obligation behind the code.
 
 | Folder | What it does | DPDPA / Rules | Article |
 |---|---|---|---|
-| [`consent/`](consent/) | Consent schema (PostgreSQL), signed consent receipts, hash-chained audit log, a FastAPI grant endpoint | S.5, S.6, Rule 3, Rule 6(1)(c) | [Consent management API](https://statechecksecurity.com/blog/dpdpa-consent-management-api) |
-| [`consent-manager/`](consent-manager/) | Zero-knowledge consent routing and an append-only consent ledger | S.6(7)–(9), Rule 4, First Schedule | [Consent Manager registration](https://statechecksecurity.com/blog/dpdpa-consent-manager-registration) |
-| [`breach-notification/`](breach-notification/) | Splunk detection rule and a Section 2(u) breach classifier | S.2(u), S.8(6), Rule 7 | [Breach notification automation](https://statechecksecurity.com/blog/dpdpa-breach-notification-automation) |
-| [`encryption/`](encryption/) | Field-level envelope encryption, nginx TLS, Istio mTLS, KMS on AWS / Azure / GCP, an OPA encryption gate | Rule 6(1)(a) | [Encryption requirements](https://statechecksecurity.com/blog/dpdpa-encryption-requirements) |
+| [`consent/`](consent/) | Consent schema (PostgreSQL), signed consent receipts, hash-chained audit log, FastAPI grant & withdrawal parity endpoints, processor fan-out, and Section 9 child data protection (VPC) | S.5, S.6, S.9, Rule 3, Rule 6(1)(c) | [Consent management API](https://statechecksecurity.com/blog/dpdpa-consent-management-api) |
+| [`consent-manager/`](consent-manager/) | Zero-knowledge consent routing (grant & withdraw) and an append-only consent ledger | S.6(7)–(9), Rule 4, First Schedule | [Consent Manager registration](https://statechecksecurity.com/blog/dpdpa-consent-manager-registration) |
+| [`breach-notification/`](breach-notification/) | Splunk detection rule, Section 2(u) breach classifier, and statutory intimation formatter for DPBI & Data Principals | S.2(u), S.8(6), Rule 7 | [Breach notification automation](https://statechecksecurity.com/blog/dpdpa-breach-notification-automation) |
+| [`encryption/`](encryption/) | Field-level envelope encryption with pseudonymized KMS context, nginx TLS, Istio mTLS, KMS on AWS / Azure / GCP, an OPA encryption gate | Rule 6(1)(a) | [Encryption requirements](https://statechecksecurity.com/blog/dpdpa-encryption-requirements) |
 | [`cross-border/`](cross-border/) | India-residency SCP, S3 / KMS Terraform, Azure Policy, a GDPR + DPDPA transfer decision engine | S.16 | [Cross-border data transfer](https://statechecksecurity.com/blog/dpdpa-cross-border-data-transfer) |
 | [`ci-cd/`](ci-cd/) | Three privacy gates for GitHub Actions (and GitLab): Semgrep rules, PII grep checks, IaC policies, an erasure-support check | S.8(4)–(5), Rule 6 | [Privacy by design in CI/CD](https://statechecksecurity.com/blog/dpdpa-privacy-by-design-cicd) |
 | [`threat-modeling/`](threat-modeling/) | LINDDUN mitigations: enumeration-safe signup, purpose-scoped access policy, crypto-shredding | S.6(1), S.8(5), S.8(7) | [Threat modelling with LINDDUN and STRIDE](https://statechecksecurity.com/blog/dpdpa-threat-modeling-linddun-stride) |
 | [`zero-trust/`](zero-trust/) | Least-privilege and micro-segmentation policies, a tamper-evident access log | Rule 6(1)(b)–(c) | [Zero Trust and DPDPA](https://statechecksecurity.com/blog/zero-trust-dpdpa-compliance) |
-| [`rights-and-erasure/`](rights-and-erasure/) | Data Principal access and erasure service, erasure trigger evaluation | S.8(7)–(8), S.11–12, Rule 8 | [NIST Privacy Framework](https://statechecksecurity.com/blog/nist-privacy-framework-dpdpa), [SOC 2](https://statechecksecurity.com/blog/soc-2-dpdpa-compliance) |
-| [`governance/`](governance/) | SDF governance config, data inventory and classification schemas, residency policy, roadmap formats | S.10, Rule 13 | [5-step roadmap](https://statechecksecurity.com/blog/5-step-dpdpa-implementation-roadmap), [NIST](https://statechecksecurity.com/blog/nist-privacy-framework-dpdpa) |
+| [`rights-and-erasure/`](rights-and-erasure/) | Data Principal access, correction, erasure, and nomination service, erasure trigger evaluation | S.8(7)–(8), S.11, S.12, S.14, Rule 8, Rule 11 | [NIST Privacy Framework](https://statechecksecurity.com/blog/nist-privacy-framework-dpdpa), [SOC 2](https://statechecksecurity.com/blog/soc-2-dpdpa-compliance) |
+| [`governance/`](governance/) | SDF governance config, data inventory, statutory grievance redressal service with SLA tracking & DPBI appeal advisory | S.10, S.13, Rule 13, Rule 14 | [5-step roadmap](https://statechecksecurity.com/blog/5-step-dpdpa-implementation-roadmap), [NIST](https://statechecksecurity.com/blog/nist-privacy-framework-dpdpa) |
 | [`mappings/`](mappings/) | ISO 27001:2022 ↔ DPDPA and SOC 2 TSC ↔ DPDPA crosswalks (CSV + XLSX) | — | [ISO 27001](https://statechecksecurity.com/blog/dpdpa-iso-27001-mapping), [SOC 2](https://statechecksecurity.com/blog/soc-2-dpdpa-compliance) |
 
 [`CHANGES-FROM-ARTICLES.md`](CHANGES-FROM-ARTICLES.md) lists everything that changed
