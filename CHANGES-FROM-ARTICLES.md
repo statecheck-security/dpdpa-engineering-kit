@@ -103,9 +103,21 @@ other than what the article says. *Misleading* = a comment or claim that isn't t
 | Wrong | In the downloadable CSV and XLSX, row 15 (Section 10(2)(c)(i), DPIA) is split by an unquoted comma: half of Implementation Notes lands in Technical Patterns and every later column shifts. In the XLSX the Effort value is lost. | Row merged in both files; Effort restored from the CSV (`Medium`). The CSV diff is that one line. | `test_csv_and_xlsx_hold_the_same_rows` |
 | Wrong | The `personal_data_dpdpa` classification tier drops `integrity_check`, which every lower tier has. Alteration of personal data is a breach under Section 2(u). | Added. | `test_personal_data_tier_carries_the_dpdpa_controls` |
 
+## Contributions & Statutory Extensions
+
+| Module | Category | Statutory Ground | Description & Resolution |
+|---|---|---|---|
+| `ci-cd/tests/` | Bug Fix | Cross-platform CI/CD | `shutil.which("bash")` failed on Windows due to WSL launcher stub. Added resilient `_find_bash()` falling back to Git Bash. Verified by `pytest ci-cd/tests/`. |
+| `encryption/` | Security Fix | Rule 6(1)(a) & (c) | KMS encryption context previously included raw Data Principal IDs, leaking cleartext PII into CloudTrail logs. Added `pseudonym_key` support for HMAC pseudonyms in encryption context. |
+| `consent/` | Missing Feature | Section 6(4), 8(7) | Added `POST /v1/consents/{id}/withdraw` and withdrawal parity endpoint `POST /v1/consents/withdraw`, with atomic `WITHDRAW` audit chaining and cascading `processor_fanout` (`ERASURE_FANOUT`). |
+| `consent/` | Missing Module | Section 9, Rule 10 | Added `parental_consent.py` implementing Verifiable Parental Consent (VPC), age-of-majority checks, and enforcing statutory prohibitions against child tracking, profiling, and targeted ads. |
+| `consent-manager/` | Missing Feature | Section 6(7), Rule 4 | Added `route_consent_withdraw` to `ConsentManagerRouter`, routing zero-knowledge encrypted revocation tokens to Data Fiduciaries. |
+| `rights-and-erasure/` | Missing Feature | Section 12, Section 14 | Implemented `handle_correction_request` (data correction/updating across systems + processor notification) and `handle_nomination_request` (nominee registration for death/incapacity). |
+| `breach-notification/` | Missing Module | Section 8(6), Rule 7 | Added `notification_formatter.py` generating compliant Rule 7(1) notices for the Data Protection Board of India and Rule 7(2) safety notices for affected Data Principals. |
+| `governance/` | Missing Module | Section 13, Rule 14 | Added `grievance_service.py` implementing statutory grievance redressal, SLA tracking, DPO escalation, and mandatory Section 13(3) DPBI appeal advisories. |
+
 ## Known limits, not changed
 
 - `encryption/terraform/aws/kms.tf` creates a CloudWatch log group "for KMS audit" but no CloudTrail trail feeds it. CloudTrail event history alone keeps 90 days, not the year Rule 6(1)(e) asks for. Add a trail to your logging account.
-- `field_encryption.py` puts the Data Principal ID in the KMS encryption context. CloudTrail logs the context in plain text, so use a pseudonym there.
 - `crypto_shred.py` uses one KMS key per Data Principal. KMS bills per key per month, so at scale, wrap per-principal data keys with one KMS key and delete the wrapped key instead. A scheduled key deletion can be cancelled for 7 days; record the erasure as final only after KMS emits `DeleteKey`.
 - `transfer-policy.json` leaves the US off the GDPR adequacy list on purpose: the EU–US Data Privacy Framework covers only certified organisations, which a country list can't express.

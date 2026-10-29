@@ -12,7 +12,33 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = yaml.safe_load((ROOT / "github" / "dpdpa-privacy-checks.yml").read_text(encoding="utf-8"))
-BASH = shutil.which("bash")
+def _find_bash() -> str | None:
+    candidates = []
+    which_bash = shutil.which("bash")
+    if which_bash:
+        if "system32" in which_bash.lower():
+            for git_p in [r"C:\Program Files\Git\bin\bash.exe", r"C:\Program Files (x86)\Git\bin\bash.exe"]:
+                if Path(git_p).is_file():
+                    candidates.append(git_p)
+            candidates.append(which_bash)
+        else:
+            candidates.append(which_bash)
+    else:
+        for git_p in [r"C:\Program Files\Git\bin\bash.exe", r"C:\Program Files (x86)\Git\bin\bash.exe"]:
+            if Path(git_p).is_file():
+                candidates.append(git_p)
+
+    for cmd in candidates:
+        try:
+            res = subprocess.run([cmd, "-c", "exit 0"], capture_output=True, check=False)  # noqa: S603
+            if res.returncode == 0:
+                return cmd
+        except (OSError, subprocess.SubprocessError):
+            pass
+    return None
+
+
+BASH = _find_bash()
 
 pytestmark = pytest.mark.skipif(BASH is None, reason="bash is not installed")
 

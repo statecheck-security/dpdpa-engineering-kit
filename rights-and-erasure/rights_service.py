@@ -34,6 +34,9 @@ class DataInventory(Protocol):
     def shared_with(self, principal_id: str) -> list[dict]: ...
     def legal_holds(self, principal_id: str) -> set[str]: ...
     def erase(self, system_id: str, principal_id: str) -> dict: ...
+    def update(self, system_id: str, principal_id: str, changes: dict) -> dict: ...
+    def record_nomination(self, principal_id: str, nominee: dict) -> dict: ...
+    def get_nomination(self, principal_id: str) -> dict | None: ...
 
 
 class AuditSink(Protocol):
@@ -47,6 +50,7 @@ class InMemoryInventory:
     systems: dict = field(default_factory=dict)        # system_id -> {"system_name", "purposes", "data": {pid: [...]}}
     sharing: dict = field(default_factory=dict)        # pid -> [{"name", "role"}]
     holds: dict = field(default_factory=dict)          # pid -> {system_id, ...}
+    nominations: dict = field(default_factory=dict)    # pid -> nominee dict
 
     def systems_for(self, principal_id):
         return [{"system_id": sid, **{k: v for k, v in s.items() if k != "data"}}
@@ -64,6 +68,28 @@ class InMemoryInventory:
     def erase(self, system_id, principal_id):
         removed = self.systems[system_id]["data"].pop(principal_id, [])
         return {"system_id": system_id, "elements_erased": len(removed)}
+
+    def update(self, system_id, principal_id, changes):
+        if system_id not in self.systems or principal_id not in self.systems[system_id]["data"]:
+            return {"system_id": system_id, "fields_updated": 0}
+        elements = self.systems[system_id]["data"][principal_id]
+        updated = 0
+        for el in elements:
+            for k, v in changes.items():
+                if el.get("field") == k:
+                    el["value"] = v
+                    updated += 1
+                elif k in el:
+                    el[k] = v
+                    updated += 1
+        return {"system_id": system_id, "fields_updated": updated}
+
+    def record_nomination(self, principal_id, nominee):
+        self.nominations[principal_id] = nominee
+        return nominee
+
+    def get_nomination(self, principal_id):
+        return self.nominations.get(principal_id)
 
 
 class DPDPARightsService:
@@ -137,6 +163,89 @@ class DPDPARightsService:
             "retention_holds": len(held),
             "completed_at": datetime.now(timezone.utc).isoformat(),
         }
+
+    def handle_correction_request(
+        self, principal_id: str, corrections: dict[str, dict], reason: str = "correction"
+    ) -> dict:
+        """
+        NIST: CT.DM-P3 (data accessible for correction)
+        DPDPA: Section 12(1)-(2) -- correction, completion and updating of personal data
+        """
+        request_id = str(uuid.uuid4())
+        affected_systems = self._get_systems_for_principal(principal_id)
+        retention_holds = self._check_retention_holds(principal_id)
+
+        update_results = []
+        for system in affected_systems:
+            sid = system["system_id"]
+            if sid not in retention_holds and sid in corrections:
+                result = self.inventory.update(sid, principal_id, corrections[sid])
+                update_results.append(result)
+
+        # Notify downstream processors per Section 12(1)
+        downstream = self._get_downstream_entities(principal_id)
+
+        self._log_correction_audit(request_id, principal_id, update_results, reason)
+
+        held = [s for s in affected_systems if s["system_id"] in retention_holds and s["system_id"] in corrections]
+        status = RequestStatus.PARTIALLY_COMPLETED if held else RequestStatus.COMPLETED
+
+        return {
+            "request_id": request_id,
+            "right_type": RightType.CORRECTION.value,
+            "status": status.value,
+            "systems_updated": len(update_results),
+            "retention_holds": len(held),
+            "downstream_notified": len(downstream),
+            "completed_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    def handle_nomination_request(
+        self, principal_id: str, nominee: dict
+    ) -> dict:
+        """
+        DPDPA: Section 14 -- Right of nomination in the event of death or incapacity
+        Rule 11 -- Procedure for nomination
+        """
+        request_id = str(uuid.uuid4())
+        if not isinstance(nominee, dict) or not nominee.get("name"):
+            return {
+                "request_id": request_id,
+                "right_type": RightType.NOMINATION.value,
+                "status": RequestStatus.REJECTED.value,
+                "reason": "invalid_nominee_details",
+            }
+
+        recorded = self.inventory.record_nomination(principal_id, nominee)
+        self.audit.write({
+            "event": "nomination_registered",
+            "request_id": request_id,
+            "principal_id": principal_id,
+            "nominee_name": nominee.get("name"),
+            "relationship": nominee.get("relationship"),
+            "at": datetime.now(timezone.utc).isoformat(),
+        })
+
+        return {
+            "request_id": request_id,
+            "right_type": RightType.NOMINATION.value,
+            "status": RequestStatus.COMPLETED.value,
+            "nominee": recorded,
+            "registered_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    def get_nomination(self, principal_id: str) -> dict | None:
+        return self.inventory.get_nomination(principal_id)
+
+    def _log_correction_audit(self, req_id: str, pid: str, results: list, reason: str) -> None:
+        self.audit.write({
+            "event": "correction_executed",
+            "request_id": req_id,
+            "principal_id": pid,
+            "reason": reason,
+            "systems": [r["system_id"] for r in results],
+            "at": datetime.now(timezone.utc).isoformat(),
+        })
 
     def _compile_data_summary(self, principal_id: str) -> list[dict]:
         return [
