@@ -78,6 +78,7 @@ versions for tests, so you can plug in your own.
 ## Related tools
 
 - **[dpdp-scan](https://github.com/statecheck-security/dpdp-scan)**: the scanner that grew out of this kit's `ci-cd/` gate. It finds Indian identifiers in code, fixtures and logs with real checksums, reads SQL, Prisma and OpenAPI schemas into a data inventory, and ships the Semgrep rules this kit's three started as. Run it in CI; the Action puts findings in the Security tab.
+- **[dpdp-webscan](https://github.com/statecheck-security/dpdp-webscan)**: the engine behind the free [DPDPA Website Check](https://statechecksecurity.com/scan). It loads a public site in headless Chromium in three states (no interaction, after reject, after accept) and reports trackers, cookies, banner behaviour, forms and the published privacy items, each mapped to a section or Rule. No score; names and hostnames only, never values.
 - **[dvdpa](https://github.com/statecheck-security/dvdpa)**: a deliberately leaky demo app to point dpdp-scan at.
 - **[paranoid](https://github.com/theAstiv/paranoid)**: self-hosted STRIDE + MAESTRO threat modelling with LLMs; the LINDDUN mitigations in `threat-modeling/` pair with it.
 
